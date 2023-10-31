@@ -1,2 +1,2 @@
 @echo off
-python "C:\Users\zhangle\Desktop\fund\fund_recorder.py"
+python "E:\LocalCodes\fund_monitor\fund_recorder.py"
