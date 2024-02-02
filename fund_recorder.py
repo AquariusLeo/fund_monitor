@@ -82,7 +82,7 @@ if __name__ == "__main__":
             searchObj = re.search(pattern, htmltext)
             data=json.loads(searchObj.group(1))
             last_opening_date=datetime.strptime(data['jzrq'], '%Y-%m-%d')
-            price=float(data['gsz'])
+            price=float(data['dwjz'])
         except:
             requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
                           data={'title':'Error from recorder.py', 'desp':'净值抓取错误，请检查接口！'+str(code)})
