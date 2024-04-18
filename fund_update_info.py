@@ -24,7 +24,7 @@ plt.rc('axes', unicode_minus=False)  # 步骤二（解决坐标轴负数的负�
 
 FUND_CODE='160516'
 FUND_PROFILE_DIR = os.path.split(os.path.realpath(__file__))[0]+'/fund_profile/'
-
+SELL_PERCENT = 0.10  # 脱离成本区间的收益率
 
 def plot_history(code, name, buypoints, sellpoints, start_date, end_date, costper):
     fig=plt.figure()
@@ -39,8 +39,8 @@ def plot_history(code, name, buypoints, sellpoints, start_date, end_date, costpe
 
     ax.axhline(costper, 0, 1, linestyle='--', color='pink')
     ax.text(his['date'][20], costper+0.005, '当前持仓成本:'+str(cost_per))
-    ax.axhline(costper*1.15, 0, 1, linestyle='--', color='pink')
-    ax.text(his['date'][20], costper*1.15+0.005, '1.15*持仓成本')
+    ax.axhline(costper*(1+SELL_PERCENT), 0, 1, linestyle='--', color='pink')
+    ax.text(his['date'][20], costper*(1+SELL_PERCENT)+0.005, '脱离成本区间')
 
     ax.grid(ls='--')
     y_major_locator=plt.MultipleLocator(0.1)

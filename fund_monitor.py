@@ -112,10 +112,11 @@ if __name__ == "__main__":
         anchor=info['anchor'][0]
         anchor_date=info['anchor_date'][0]
 
-        message+='### {} {}\r\r  锚点：{}  估算净值：{}  涨跌幅：{}% \r\r较锚点变化：{}%   持仓成本*1.15：{}\r\r'.format(
+        message+='### {} {}\r\r  锚点：{}  估算净值：{}  涨跌幅：{}% \r\r较锚点变化：{}%   脱离成本区间{}的净值：{}\r\r'.format(
             code, fund_name, anchor, gs_price, change_rate,
             round((gs_price-anchor)/anchor*100, 2),
-            round(1.15*cost_per, 4)
+            (1+SELL_PERCENT),
+            round(cost_per*(1+SELL_PERCENT), 4)
         )
         
         # 判断买入卖出
