@@ -12,6 +12,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import requests
+import warnings
+warnings.filterwarnings("ignore")
 
 PUSH_KEY = 'SCT99793TadrpdKmu7I9TXJqNiqNXJIoY'
 FUND_PROFILE_DIR = os.path.split(os.path.realpath(__file__))[0]+'/fund_profile/'

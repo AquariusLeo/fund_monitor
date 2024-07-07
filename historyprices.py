@@ -8,6 +8,8 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 # from prettytable import *
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def get_url(url, params=None, proxies=None):

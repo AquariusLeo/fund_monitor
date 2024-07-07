@@ -17,6 +17,8 @@ import datetime
 import pandas as pd
 from historyprices import get_history_prices
 import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore")
 
 font = {'family':'SimHei', 'weight':'bold'}
 plt.rc('font', **font)               # 步骤一（设置字体的更多属性）

@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from historyprices import get_history_prices
+import warnings
+warnings.filterwarnings("ignore")
 
 
 buy_rate=0.0015  # 购入费率
