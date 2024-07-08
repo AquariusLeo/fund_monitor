@@ -17,8 +17,6 @@ import datetime
 import pandas as pd
 from historyprices import get_history_prices
 import matplotlib.pyplot as plt
-import warnings
-warnings.filterwarnings("ignore")
 
 font = {'family':'SimHei', 'weight':'bold'}
 plt.rc('font', **font)               # 步骤一（设置字体的更多属性）
@@ -33,11 +31,11 @@ def plot_history(code, name, buypoints, sellpoints, start_date, end_date, costpe
     ax=fig.add_subplot(1,1,1)
 
     his=get_history_prices(code, start_date, end_date)
-    his.plot(kind='line', x='date', y='price', ax=ax)
+    his.plot(kind='line', x='date', y='price', ax=ax, color='silver')
 
     buypoints.plot(kind='scatter', x='date', y='price', ax=ax, color='r')
 
-    sellpoints.plot(kind='scatter', x='date', y='price', ax=ax, color='black')
+    sellpoints.plot(kind='scatter', x='date', y='price', ax=ax, color='blue')
 
     ax.axhline(costper, 0, 1, linestyle='--', color='pink')
     ax.text(his['date'][20], costper+0.005, '当前持仓成本:'+str(cost_per))
@@ -47,7 +45,7 @@ def plot_history(code, name, buypoints, sellpoints, start_date, end_date, costpe
     ax.grid(ls='--')
     y_major_locator=plt.MultipleLocator(0.1)
     ax.yaxis.set_major_locator(y_major_locator)
-    ax.set_title(code+name+' 单位净值（近 1 年）')
+    ax.set_title(code+name+' 单位净值与买入卖出记录')
 
     plt.show()
 
@@ -195,4 +193,9 @@ if __name__ == "__main__":
     ))
 
     now=pd.Timestamp.now()
-    plot_history(fund_code, fund_name, buy_points, sell_points, (now-datetime.timedelta(days=365)).strftime('%Y-%m-%d'), now.strftime('%Y-%m-%d'), cost_per)
+    start_time = now-datetime.timedelta(days=365)
+    if buy_points['date'].iloc[0]<start_time: 
+        start_time = buy_points['date'].iloc[0]
+    if sell_points['date'].iloc[0]<start_time: 
+        start_time = sell_points['date'].iloc[0]
+    plot_history(fund_code, fund_name, buy_points, sell_points, start_time.strftime('%Y-%m-%d'), now.strftime('%Y-%m-%d'), cost_per)

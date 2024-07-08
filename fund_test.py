@@ -11,9 +11,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from historyprices import get_history_prices
-import warnings
-warnings.filterwarnings("ignore")
-
 
 BUY_PERCENT = 0.04   # 触发下跌买入的跌幅
 SELL_PERCENT = 0.10  # 脱离成本区间的收益率
@@ -29,14 +26,14 @@ def plot_fundation_operation(string, price_sr, buy_points, sell_points):
     fig=plt.figure()
     ax=fig.add_subplot(1,1,1)
 
-    price_sr.plot(kind='line', ax=ax)
+    price_sr.plot(kind='line', ax=ax, color='silver')
 
     # y_lim=[1,2]
     buy_points_df=buy_points.reset_index()
     buy_points_df.plot(kind='scatter', x='index', y='price', ax=ax, color='r')
 
     sell_points_df=sell_points.reset_index()
-    sell_points_df.plot(kind='scatter', x='index', y='price', ax=ax, color='black')
+    sell_points_df.plot(kind='scatter', x='index', y='price', ax=ax, color='blue')
 
     ax.grid(ls='--')
     y_major_locator=plt.MultipleLocator(0.1)

@@ -12,8 +12,6 @@ import sys
 
 import pandas as pd
 import requests
-import warnings
-warnings.filterwarnings("ignore")
 
 PUSH_KEY = 'SCT99793TadrpdKmu7I9TXJqNiqNXJIoY'
 FUND_PROFILE_DIR = os.path.split(os.path.realpath(__file__))[0]+'/fund_profile/'
@@ -123,7 +121,8 @@ if __name__ == "__main__":
         
         # 判断买入卖出
         if gs_price<=anchor*(1-BUY_PERCENT):  # 比锚点下跌BUY_PERCENT，买进
-            tobeRecord=tobeRecord.append({'code':code, 'type':0, 'amount||shares':single_amount}, ignore_index=True)
+            tobeRecord.loc[len(tobeRecord)]=[code, 0, single_amount]
+            # tobeRecord=tobeRecord.append({'code':code, 'type':0, 'amount||shares':single_amount}, ignore_index=True)
             message+=('> 建议买入：'+str(single_amount)+'元\r\r')
             print('[info] {} {} 建议买入：{}元'.format(code, fund_name, single_amount), file=log_fo)
 
@@ -132,7 +131,8 @@ if __name__ == "__main__":
                 or sell_points.empty
                 or gs_price>=sell_points['price'].iloc[-1]*1.05):
                     sell_shares=round(shares*sell_prop, 2)
-                    tobeRecord=tobeRecord.append({'code':code, 'type':1, 'amount||shares':sell_shares}, ignore_index=True)
+                    tobeRecord.loc[len(tobeRecord)]=[code, 1, sell_shares]
+                    # tobeRecord=tobeRecord.append({'code':code, 'type':1, 'amount||shares':sell_shares}, ignore_index=True)
                     message+=('> 建议卖出：'+str(sell_shares)+'份\r\r')
                     print('[info] {} {} 建议卖出：{}份'.format(code, fund_name, sell_shares), file=log_fo)
 
