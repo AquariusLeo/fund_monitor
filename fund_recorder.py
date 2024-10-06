@@ -15,12 +15,12 @@ import requests
 import warnings
 warnings.filterwarnings("ignore")
 
-PUSH_KEY = 'SCT99793TadrpdKmu7I9TXJqNiqNXJIoY'
+SERVERCHAN3_URL = 'https://sctp1464t7cbb3vazcuup8msfmase4g.push.ft07.com/send'
 FUND_PROFILE_DIR = os.path.split(os.path.realpath(__file__))[0]+'/fund_profile/'
 LIST_PATH = FUND_PROFILE_DIR+'monitor_list.txt'
 RECORD_PATH = FUND_PROFILE_DIR+'tobeRecord.csv'
 LOG_PATH = FUND_PROFILE_DIR+'recorder.log'
-SELL_PERCENT = 0.10  # 脱离成本区间的收益率
+SELL_PERCENT = 0.15  # 脱离成本区间的收益率
 
 if __name__ == "__main__":
 
@@ -35,9 +35,10 @@ if __name__ == "__main__":
         searchObj = re.search(pattern, htmltext)
         data = json.loads(searchObj.group(1))
         gs_date=data['gztime'].split(' ')[0]  # 估值对应日期
-    except:
-        requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                      data={'title':'Error from recorder.py', 'desp':'接口抓取错误，请检查接口！'})
+    except Exception as e:
+        print(e, file=log_fo)
+        requests.post(SERVERCHAN3_URL,
+                      data={'title':'Error from recorder.py', 'desp':'接口抓取错误，请检查接口！', 'tags':'Error'})
         sys.exit()
     if gs_date != nowdate.strftime('%Y-%m-%d'):  # 当天不是开盘日
         print('非开盘日，退出！', file=log_fo)
@@ -45,16 +46,16 @@ if __name__ == "__main__":
 
     # 校验tobeRecord文件的正确性
     if not os.path.exists(RECORD_PATH):
-        requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                      data={'title':'Error from recorder.py', 'desp':'tobeRecord文件不存在，请检查！'})
+        requests.post(SERVERCHAN3_URL,
+                      data={'title':'Error from recorder.py', 'desp':'tobeRecord文件不存在，请检查！', 'tags':'Error'})
         sys.exit()
     last_opendate=data['jzrq']  # 上一个开盘日期
     modify_date=datetime.fromtimestamp(os.path.getmtime(RECORD_PATH)).strftime('%Y-%m-%d')
     # print(last_opendate, file=log_fo)
     # print(modify_date, file=log_fo)
     if last_opendate != modify_date:
-        requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                      data={'title':'Error from recorder.py', 'desp':'tobeRecord文件修改时间非前一开盘日，请检查！'})
+        requests.post(SERVERCHAN3_URL,
+                      data={'title':'Error from recorder.py', 'desp':'tobeRecord文件修改时间非前一开盘日，请检查！', 'tags':'Error'})
         sys.exit()
 
     # 定义message与tobeRecord
@@ -71,8 +72,8 @@ if __name__ == "__main__":
                 strlist[i]=strlist[i].rstrip()
             print(strlist, file=log_fo)
     except:
-        requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                      data={'title':'Error from recorder.py', 'desp':'monitor_list读取错误，请检查文件！'})
+        requests.post(SERVERCHAN3_URL,
+                      data={'title':'Error from recorder.py', 'desp':'monitor_list读取错误，请检查文件！', 'tags':'Error'})
         sys.exit()
 
     # 遍历监测的基金code
@@ -86,8 +87,8 @@ if __name__ == "__main__":
             last_opening_date=datetime.strptime(data['jzrq'], '%Y-%m-%d')
             price=float(data['dwjz'])
         except:
-            requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                          data={'title':'Error from recorder.py', 'desp':'净值抓取错误，请检查接口！'+str(code)})
+            requests.post(SERVERCHAN3_URL,
+                          data={'title':'Error from recorder.py', 'desp':'净值抓取错误，请检查接口！'+str(code), 'tags':'Error'})
             continue
             # sys.exit()
 
@@ -114,7 +115,7 @@ if __name__ == "__main__":
         anchor_date=info['anchor_date'][0]
 
         # 执行买入卖出操作
-        message+='### {} {}\r\r'.format(code, fund_name)
+        message+='## {} {}\n\n'.format(code, fund_name)
         for index, row in tobeRecord[tobeRecord['code']==code].iterrows():
             if row['type']==0:
                 # 买入操作
@@ -129,7 +130,7 @@ if __name__ == "__main__":
                 anchor_date=last_opening_date
                 buy_points=buy_points.append({'date':last_opening_date, 'price':price, 'amount':amount},
                                              ignore_index=True)
-                message+='> 已写入 买入{}元\r\r'.format(amount)
+                message+='> 已写入 买入{}元\n\n'.format(amount)
             if row['type']==1:
                 # 卖出操作
                 sell_shares=row['amount||shares']
@@ -140,14 +141,14 @@ if __name__ == "__main__":
                 shares-=sell_shares
                 sell_points=sell_points.append({'date':last_opening_date, 'price':price, 'sell_shares':sell_shares},
                                                ignore_index=True)
-                message+='> 已写入 卖出{}份\r\r'.format(sell_shares)
+                message+='> 已写入 卖出{}份\n\n'.format(sell_shares)
 
         # 脱离成本区间后更新提高锚点
         if price>=cost_per*(1+SELL_PERCENT) and price>anchor:
             if (last_opening_date-anchor_date).days>=operate_freq:
                 anchor=price
                 anchor_date=last_opening_date
-                message+='> 锚点提高至{} ({})\r\r'.format(anchor, anchor_date)
+                message+='> 锚点提高至{} ({})\n\n'.format(anchor, anchor_date)
 
         # 写入xlsx文件
         info['input_amount']=input_amount
@@ -166,7 +167,7 @@ if __name__ == "__main__":
 
         hold_amount=round(price*shares, 2)
         message+=('共计投入{}元，持有金额{}元，持有份额{}，持仓成本单价{}元，持有收益{}元，'
-            '持有收益率{}%。\r\r累计收益{}元， 最大投入本金{}元，累计收益率{}%\r\r').format(
+            '**持有收益率{}%**。\n\n累计收益{}元， 最大投入本金{}元，**累计收益率{}%**\n\n').format(
             input_amount, hold_amount, round(shares, 2), cost_per, round(hold_amount-cost, 2),
             round((hold_amount-cost)/cost*100 if cost!=0 else 0, 2), round(hold_amount-cost+history_profit, 2), round(max_cost, 2),
             round((hold_amount-cost+history_profit)/max_cost*100 if max_cost!=0 else 0, 2)
@@ -177,10 +178,11 @@ if __name__ == "__main__":
     if message!='':
         params={
             'title': nowdate.strftime('%Y-%m-%d')+'基金操作记录',
-            # 'short': '核对操作记录...',
-            'desp': message
+            'short': '核对操作记录...',
+            'desp': message,
+            'tags': 'Recorder'
         }
-        result=requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send', data=params)
+        result=requests.post(SERVERCHAN3_URL, data=params)
         print(result, file=log_fo)
 
     # 删除tobeRecord文件

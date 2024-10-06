@@ -13,13 +13,13 @@ import sys
 import pandas as pd
 import requests
 
-PUSH_KEY = 'SCT99793TadrpdKmu7I9TXJqNiqNXJIoY'
+SERVERCHAN3_URL = 'https://sctp1464t7cbb3vazcuup8msfmase4g.push.ft07.com/send'
 FUND_PROFILE_DIR = os.path.split(os.path.realpath(__file__))[0]+'/fund_profile/'
 LIST_PATH = FUND_PROFILE_DIR+'monitor_list.txt'
 RECORD_PATH = FUND_PROFILE_DIR+'tobeRecord.csv'
 LOG_PATH = FUND_PROFILE_DIR+'monitor.log'
 BUY_PERCENT = 0.04   # 触发下跌买入的跌幅
-SELL_PERCENT = 0.10  # 脱离成本区间的收益率
+SELL_PERCENT = 0.15  # 脱离成本区间的收益率
 
 if __name__ == "__main__":
 
@@ -35,9 +35,10 @@ if __name__ == "__main__":
         searchObj = re.search(pattern, htmltext)
         data = json.loads(searchObj.group(1))
         gs_date = data['gztime'].split(' ')[0]  # 估值对应日期
-    except:
-        requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                      data={'title':'Error from recorder.py', 'desp':'接口抓取错误，请检查接口！'})
+    except Exception as e:
+        print(e, file=log_fo)
+        requests.post(SERVERCHAN3_URL,
+                      data={'title':'Error from monitor.py', 'desp':'接口抓取错误，请检查接口！', 'tags':'Error'})
         sys.exit()
     if gs_date != nowdate.strftime('%Y-%m-%d'):  # 当天不是开盘日
         print('非开盘日，退出！', file=log_fo)
@@ -53,14 +54,14 @@ if __name__ == "__main__":
                 strlist[i]=strlist[i].rstrip()
             print(strlist, file=log_fo)
     except:
-        requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                      data={'title':'Error from monitor.py', 'desp':'monitor_list读取错误，请检查文件！'})
+        requests.post(SERVERCHAN3_URL,
+                      data={'title':'Error from monitor.py', 'desp':'monitor_list读取错误，请检查文件！', 'tags':'Error'})
         sys.exit()
 
     # 判断tobeRecord文件是否不存在
     if os.path.exists(RECORD_PATH):
-        requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                      data={'title':'Error from monitor.py', 'desp':'tobeRecord文件已存在，前一天recorder未正常运行！'})
+        requests.post(SERVERCHAN3_URL,
+                      data={'title':'Error from monitor.py', 'desp':'tobeRecord文件已存在，前一天recorder未正常运行！', 'tags':'Error'})
         sys.exit()
 
     message=''
@@ -79,8 +80,8 @@ if __name__ == "__main__":
             if 'gszzl' not in data: raise ValueError
             change_rate=float(data['gszzl'])
         except:
-            requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                          data={'title':'Error from monitor.py', 'desp':'估值抓取错误，请检查接口！'})
+            requests.post(SERVERCHAN3_URL,
+                          data={'title':'Error from monitor.py', 'desp':'估值抓取错误，请检查接口！'+str(code), 'tags':'Error'})
             continue
             # sys.exit()
 
@@ -92,8 +93,8 @@ if __name__ == "__main__":
             sell_points=pd.read_excel(FUND_PROFILE_DIR+code+'.xlsx', sheet_name='sellpoints', header=0, index_col=None)
             sell_points.sort_values(by='date', ascending=True, inplace=True)
         except:
-            requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send',
-                          data={'title':'Error from monitor.py', 'desp':'xlsx文件读取错误，请检查文件！'})
+            requests.post(SERVERCHAN3_URL,
+                          data={'title':'Error from monitor.py', 'desp':'xlsx文件读取错误，请检查文件！'+str(code), 'tags':'Error'})
             continue
             # sys.exit()
 
@@ -112,18 +113,18 @@ if __name__ == "__main__":
         anchor=info['anchor'][0]
         anchor_date=info['anchor_date'][0]
 
-        message+='### {} {}\r\r  锚点：{}  估算净值：{}  涨跌幅：{}% \r\r较锚点变化：{}%   脱离成本区间{}的净值：{}\r\r'.format(
+        message+='## {} {}\n\n锚点：{}  估算净值：{}  **涨跌幅：{}%** \n\n**较锚点变化：{}%  较成本单价变化：{}%**    脱离成本区间{}%的净值：{}\n\n'.format(
             code, fund_name, anchor, gs_price, change_rate,
             round((gs_price-anchor)/anchor*100, 2),
-            (1+SELL_PERCENT),
-            round(cost_per*(1+SELL_PERCENT), 4)
+            round((gs_price-cost_per)/cost_per*100, 2),
+            round(SELL_PERCENT*100), round(cost_per*(1+SELL_PERCENT), 4)
         )
         
         # 判断买入卖出
         if gs_price<=anchor*(1-BUY_PERCENT):  # 比锚点下跌BUY_PERCENT，买进
             tobeRecord.loc[len(tobeRecord)]=[code, 0, single_amount]
             # tobeRecord=tobeRecord.append({'code':code, 'type':0, 'amount||shares':single_amount}, ignore_index=True)
-            message+=('> 建议买入：'+str(single_amount)+'元\r\r')
+            message+=('> 建议买入：'+str(single_amount)+'元\n')
             print('[info] {} {} 建议买入：{}元'.format(code, fund_name, single_amount), file=log_fo)
 
         if gs_price>=cost_per*(1+SELL_PERCENT) and shares>20:   # 脱离成本区间SELL_PERCENT比例，卖出
@@ -133,7 +134,7 @@ if __name__ == "__main__":
                     sell_shares=round(shares*sell_prop, 2)
                     tobeRecord.loc[len(tobeRecord)]=[code, 1, sell_shares]
                     # tobeRecord=tobeRecord.append({'code':code, 'type':1, 'amount||shares':sell_shares}, ignore_index=True)
-                    message+=('> 建议卖出：'+str(sell_shares)+'份\r\r')
+                    message+=('> 建议卖出：'+str(sell_shares)+'份\n')
                     print('[info] {} {} 建议卖出：{}份'.format(code, fund_name, sell_shares), file=log_fo)
 
         print('[info] 已监测基金：{} {}'.format(code, fund_name), file=log_fo)
@@ -145,11 +146,12 @@ if __name__ == "__main__":
     # 只有开盘日才推送消息
     if message!='':
         params={
-            'title': nowdate.strftime('%Y-%m-%d')+'基金操作监测',
-            # 'short': '点击下方查看...',
-            'desp': message
+            'title': nowdate.strftime('%Y-%m-%d')+'基金买卖监测',
+            'short': '点击查看详情...',
+            'desp': message,
+            'tags': 'Monitor'
         }
-        result=requests.post('https://sctapi.ftqq.com/'+PUSH_KEY+'.send', data=params)
+        result=requests.post(SERVERCHAN3_URL, data=params)
         print(result, file=log_fo)
     
     # tobeRecord文件每天更新
