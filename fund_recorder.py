@@ -20,7 +20,8 @@ FUND_PROFILE_DIR = os.path.split(os.path.realpath(__file__))[0]+'/fund_profile/'
 LIST_PATH = FUND_PROFILE_DIR+'monitor_list.txt'
 RECORD_PATH = FUND_PROFILE_DIR+'tobeRecord.csv'
 LOG_PATH = FUND_PROFILE_DIR+'recorder.log'
-SELL_PERCENT = 0.15  # 脱离成本区间的收益率
+BUY_PERCENT = 0.04   # 触发下跌买入的跌幅
+SELL_PERCENT = 0.10  # 脱离成本区间的收益率
 
 if __name__ == "__main__":
 
@@ -148,7 +149,14 @@ if __name__ == "__main__":
             if (last_opening_date-anchor_date).days>=operate_freq:
                 anchor=price
                 anchor_date=last_opening_date
-                message+='> 锚点提高至{} ({})\n\n'.format(anchor, anchor_date)
+                message+='> 脱离成本区间，锚点提高至{} ({})\n\n'.format(anchor, anchor_date)
+
+        # 长期低位震荡时更新提高锚点
+        if price>=anchor*(1+BUY_PERCENT):
+            if (last_opening_date-anchor_date).days>=operate_freq:
+                anchor=price
+                anchor_date=last_opening_date
+                message+='> 低位震荡，锚点提高至{} ({})\n\n'.format(anchor, anchor_date)
 
         # 写入xlsx文件
         info['input_amount']=input_amount
