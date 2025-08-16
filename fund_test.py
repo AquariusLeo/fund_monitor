@@ -16,10 +16,10 @@ BUY_PERCENT = 0.04   # 触发下跌买入的跌幅
 SELL_PERCENT = 0.10  # 脱离成本区间的收益率
 buy_rate=0  # 购入费率，注意转换成不带百分号的小数
 sell_rate=0  # 卖出费率
-single_amount=200  # 单次购入金额，可根据近1-3年最大回撤决定，20%以下200元，20-40% 150元，40%以上100元（使得在最大回撤下的总投入在1000元左右）
-code='008929'  # 基金代码
+single_amount=400  # 单次购入金额，可根据近1-3年最大回撤决定，20%以下400元，20-40% 300元，40%以上200元（使得在最大回撤下的总投入在2000元左右）
+code='011609'  # 基金代码
 startdate='2018-09-02'  # 选取历史记录的开始日期
-enddate='2024-06-30'   # 结束日期
+enddate='2025-07-30'   # 结束日期
 
 
 def plot_fundation_operation(string, price_sr, buy_points, sell_points):
@@ -93,6 +93,12 @@ def single_simulation(sell_share_prop, out_of_cost_range, operate_freq, days=730
             if (index-anchor_date).days>=operate_freq:
                     anchor=price
                     anchor_date=index
+
+        # 长期低位震荡（1.04~1.1之间）时更新提高锚点
+        if price>=anchor*(1+BUY_PERCENT) and price<=anchor*(1+SELL_PERCENT):
+            if (index-anchor_date).days>=operate_freq:
+                anchor=price
+                anchor_date=index
             
         if price>=cost_per*(1+out_of_cost_range) and shares>20:   # 脱离成本区间，卖出
             if (not sell_points.empty and (index-sell_points.index[-1]).days>=operate_freq) \
