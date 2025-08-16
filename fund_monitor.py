@@ -19,7 +19,7 @@ LIST_PATH = FUND_PROFILE_DIR+'monitor_list.txt'
 RECORD_PATH = FUND_PROFILE_DIR+'tobeRecord.csv'
 LOG_PATH = FUND_PROFILE_DIR+'monitor.log'
 BUY_PERCENT = 0.04   # 触发下跌买入的跌幅
-SELL_PERCENT = 0.15  # 脱离成本区间的收益率
+SELL_PERCENT = 0.10  # 脱离成本区间的收益率
 
 if __name__ == "__main__":
 
@@ -65,6 +65,7 @@ if __name__ == "__main__":
         sys.exit()
 
     message=''
+    hasAdvise=False
     # 用于第二天记录买入卖出点。type: 0: 买入 1: 卖出
     tobeRecord=pd.DataFrame(columns=['code', 'type', 'amount||shares'])
 
@@ -124,6 +125,7 @@ if __name__ == "__main__":
         if gs_price<=anchor*(1-BUY_PERCENT):  # 比锚点下跌BUY_PERCENT，买进
             tobeRecord.loc[len(tobeRecord)]=[code, 0, single_amount]
             # tobeRecord=tobeRecord.append({'code':code, 'type':0, 'amount||shares':single_amount}, ignore_index=True)
+            hasAdvise=True
             message+=('> 建议买入：'+str(single_amount)+'元\n')
             print('[info] {} {} 建议买入：{}元'.format(code, fund_name, single_amount), file=log_fo)
 
@@ -134,6 +136,7 @@ if __name__ == "__main__":
                     sell_shares=round(shares*sell_prop, 2)
                     tobeRecord.loc[len(tobeRecord)]=[code, 1, sell_shares]
                     # tobeRecord=tobeRecord.append({'code':code, 'type':1, 'amount||shares':sell_shares}, ignore_index=True)
+                    hasAdvise=True
                     message+=('> 建议卖出：'+str(sell_shares)+'份\n')
                     print('[info] {} {} 建议卖出：{}份'.format(code, fund_name, sell_shares), file=log_fo)
 
@@ -143,10 +146,12 @@ if __name__ == "__main__":
     # print(tobeRecord, file=fo)
     # print(message, file=fo)
 
+    title = nowdate.strftime('%Y-%m-%d')+'基金买卖监测'
+    if hasAdvise: title = '$$' + title
     # 只有开盘日才推送消息
     if message!='':
         params={
-            'title': nowdate.strftime('%Y-%m-%d')+'基金买卖监测',
+            'title': title,
             'short': '点击查看详情...',
             'desp': message,
             'tags': 'Monitor'
