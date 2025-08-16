@@ -151,8 +151,8 @@ if __name__ == "__main__":
                 anchor_date=last_opening_date
                 message+='> 脱离成本区间，锚点提高至{} ({})\n\n'.format(anchor, anchor_date)
 
-        # 长期低位震荡时更新提高锚点
-        if price>=anchor*(1+BUY_PERCENT):
+        # 长期低位震荡（1.04~1.1之间）时更新提高锚点
+        if price>=anchor*(1+BUY_PERCENT) and price<=anchor*(1+SELL_PERCENT):
             if (last_opening_date-anchor_date).days>=operate_freq:
                 anchor=price
                 anchor_date=last_opening_date
