@@ -115,6 +115,11 @@ if __name__ == "__main__":
         anchor=info['anchor'][0]
         anchor_date=info['anchor_date'][0]
 
+        # #号注释的基金跳过
+        if code.startswith('#'):
+            message += '## {} {}\n\n暂停监测  锚点：{} ({})'.format(code, fund_name, anchor, anchor_date)
+            continue
+
         # 执行买入卖出操作
         message+='## {} {}\n\n'.format(code, fund_name)
         for index, row in tobeRecord[tobeRecord['code']==code].iterrows():
