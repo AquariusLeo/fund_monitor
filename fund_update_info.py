@@ -24,6 +24,7 @@ plt.rc('axes', unicode_minus=False)  # 步骤二（解决坐标轴负数的负�
 
 FUND_CODE='160516'
 FUND_PROFILE_DIR = os.path.split(os.path.realpath(__file__))[0]+'/fund_profile/'
+BUY_PERCENT = 0.04   # 触发下跌买入的跌幅
 SELL_PERCENT = 0.10  # 脱离成本区间的收益率
 
 def plot_history(code, name, buypoints, sellpoints, start_date, end_date, costper):
@@ -161,7 +162,14 @@ if __name__ == "__main__":
     # print(history)
     for index, record in history.iterrows():
         price=record['price']
-        if price>=cost_per*1.10 and price>anchor:   # 脱离成本区间后更新提高锚点
+        # 脱离成本区间后更新提高锚点
+        if price>=cost_per*(1+SELL_PERCENT) and price>anchor:   
+            if (record['date']-anchor_date).days>=operate_freq:
+                anchor=price
+                anchor_date=record['date']
+
+        # 长期低位震荡（1.04~1.1之间）时更新提高锚点
+        if price>=anchor*(1+BUY_PERCENT) and price<=anchor*(1+SELL_PERCENT):
             if (record['date']-anchor_date).days>=operate_freq:
                 anchor=price
                 anchor_date=record['date']
