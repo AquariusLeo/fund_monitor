@@ -70,6 +70,11 @@ if __name__ == "__main__":
     tobeRecord=pd.DataFrame(columns=['code', 'type', 'amount||shares'])
 
     for code in strlist:
+        # #号注释的基金跳过
+        if code.startswith('#'):
+            message += '## {} {}\n\n暂停监测  估算净值：{}  锚点：{} ({})'.format(code, fund_name, gs_price, anchor, anchor_date)
+            continue
+
         # 抓取当前基金估值
         try:
             htmltext = requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
@@ -113,11 +118,6 @@ if __name__ == "__main__":
         history_profit=info['history_profit'][0]
         anchor=info['anchor'][0]
         anchor_date=info['anchor_date'][0]
-
-        # #号注释的基金跳过
-        if code.startswith('#'):
-            message += '## {} {}\n\n暂停监测  估算净值：{}  锚点：{} ({})'.format(code, fund_name, gs_price, anchor, anchor_date)
-            continue
 
         message+='## {} {}\n\n锚点：{}  估算净值：{}  **涨跌幅：{}%** \n\n**较锚点变化：{}%  较成本单价变化：{}%**    脱离成本区间{}%的净值：{}\n\n'.format(
             code, fund_name, anchor, gs_price, change_rate,

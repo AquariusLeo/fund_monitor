@@ -79,6 +79,11 @@ if __name__ == "__main__":
 
     # 遍历监测的基金code
     for code in strlist:
+        # #号注释的基金跳过
+        if code.startswith('#'):
+            message += '## {} {}\n\n暂停监测  锚点：{} ({})'.format(code, fund_name, anchor, anchor_date)
+            continue
+        
         # 获取上一开盘日的净值
         try:
             htmltext=requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
@@ -114,11 +119,6 @@ if __name__ == "__main__":
         history_profit=info['history_profit'][0]
         anchor=info['anchor'][0]
         anchor_date=info['anchor_date'][0]
-
-        # #号注释的基金跳过
-        if code.startswith('#'):
-            message += '## {} {}\n\n暂停监测  锚点：{} ({})'.format(code, fund_name, anchor, anchor_date)
-            continue
 
         # 执行买入卖出操作
         message+='## {} {}\n\n'.format(code, fund_name)
