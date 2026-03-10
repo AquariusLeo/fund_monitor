@@ -72,7 +72,7 @@ if __name__ == "__main__":
     for code in strlist:
         # #号注释的基金跳过
         if code.startswith('#'):
-            message += '## {} {}\n\n暂停监测  估算净值：{}  锚点：{} ({})'.format(code, fund_name, gs_price, anchor, anchor_date)
+            message += '## {} {}\n\n暂停监测  估算净值：{}  锚点：{} ({})\n\n'.format(code, fund_name, gs_price, anchor, anchor_date)
             continue
 
         # 抓取当前基金估值

@@ -81,7 +81,7 @@ if __name__ == "__main__":
     for code in strlist:
         # #号注释的基金跳过
         if code.startswith('#'):
-            message += '## {} {}\n\n暂停监测  锚点：{} ({})'.format(code, fund_name, anchor, anchor_date)
+            message += '## {} {}\n\n暂停监测  锚点：{} ({})\n\n'.format(code, fund_name, anchor, anchor_date)
             continue
         
         # 获取上一开盘日的净值
