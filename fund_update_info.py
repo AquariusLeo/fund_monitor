@@ -202,8 +202,8 @@ if __name__ == "__main__":
 
     now=pd.Timestamp.now()
     start_time = now-datetime.timedelta(days=365)
-    if buy_points['date'].iloc[0]<start_time: 
+    if not buy_points['date'].empty and buy_points['date'].iloc[0]<start_time: 
         start_time = buy_points['date'].iloc[0]
-    if sell_points['date'].iloc[0]<start_time: 
+    if not sell_points['date'].empty and sell_points['date'].iloc[0]<start_time: 
         start_time = sell_points['date'].iloc[0]
     plot_history(fund_code, fund_name, buy_points, sell_points, start_time.strftime('%Y-%m-%d'), now.strftime('%Y-%m-%d'), cost_per)
