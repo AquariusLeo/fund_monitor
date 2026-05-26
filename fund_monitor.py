@@ -70,26 +70,11 @@ if __name__ == "__main__":
     tobeRecord=pd.DataFrame(columns=['code', 'type', 'amount||shares'])
 
     for code in strlist:
-        # #号注释的基金跳过
+        # 去除code中的非数字部分，过滤掉#号
+        isCommented = False
         if code.startswith('#'):
-            message += '## {} {}\n\n暂停监测  估算净值：{}  锚点：{} ({})\n\n'.format(code, fund_name, gs_price, anchor, anchor_date)
-            continue
-
-        # 抓取当前基金估值
-        try:
-            htmltext = requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
-            pattern = r'^jsonpgz\((.*)\)'
-            searchObj = re.search(pattern, htmltext)
-            data = json.loads(searchObj.group(1))
-            if 'gsz' not in data: raise ValueError
-            gs_price=float(data['gsz'])
-            if 'gszzl' not in data: raise ValueError
-            change_rate=float(data['gszzl'])
-        except:
-            requests.post(SERVERCHAN3_URL,
-                          data={'title':'Error from monitor.py', 'desp':'估值抓取错误，请检查接口！'+str(code), 'tags':'Error'})
-            continue
-            # sys.exit()
+            isCommented = True
+            code = re.sub(r'\D', '', code)
 
         # 读取xlsx文件
         try:
@@ -118,6 +103,28 @@ if __name__ == "__main__":
         history_profit=info['history_profit'][0]
         anchor=info['anchor'][0]
         anchor_date=info['anchor_date'][0]
+        gs_price=0
+
+        # #号注释的基金跳过
+        if isCommented:
+            message += '## {} {}\n\n暂停监测  估算净值：{}  锚点：{} ({})\n\n'.format(code, fund_name, gs_price, anchor, anchor_date)
+            continue
+
+        # 抓取当前基金估值
+        try:
+            htmltext = requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
+            pattern = r'^jsonpgz\((.*)\)'
+            searchObj = re.search(pattern, htmltext)
+            data = json.loads(searchObj.group(1))
+            if 'gsz' not in data: raise ValueError
+            gs_price=float(data['gsz'])
+            if 'gszzl' not in data: raise ValueError
+            change_rate=float(data['gszzl'])
+        except:
+            requests.post(SERVERCHAN3_URL,
+                          data={'title':'Error from monitor.py', 'desp':'估值抓取错误，请检查接口！'+str(code), 'tags':'Error'})
+            continue
+            # sys.exit()
 
         message+='## {} {}\n\n锚点：{}  估算净值：{}  **涨跌幅：{}%** \n\n**较锚点变化：{}%  较成本单价变化：{}%**    脱离成本区间{}%的净值：{}\n\n'.format(
             code, fund_name, anchor, gs_price, change_rate,

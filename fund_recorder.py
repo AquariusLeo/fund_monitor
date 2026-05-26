@@ -79,31 +79,24 @@ if __name__ == "__main__":
 
     # 遍历监测的基金code
     for code in strlist:
-        # #号注释的基金跳过
+        # 去除code中的非数字部分，过滤掉#号
+        isCommented = False
         if code.startswith('#'):
-            message += '## {} {}\n\n暂停监测  锚点：{} ({})\n\n'.format(code, fund_name, anchor, anchor_date)
-            continue
-        
-        # 获取上一开盘日的净值
-        try:
-            htmltext=requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
-            pattern = r'^jsonpgz\((.*)\)'
-            searchObj = re.search(pattern, htmltext)
-            data=json.loads(searchObj.group(1))
-            last_opening_date=datetime.strptime(data['jzrq'], '%Y-%m-%d')
-            price=float(data['dwjz'])
-        except:
-            requests.post(SERVERCHAN3_URL,
-                          data={'title':'Error from recorder.py', 'desp':'净值抓取错误，请检查接口！'+str(code), 'tags':'Error'})
-            continue
-            # sys.exit()
+            isCommented = True
+            code = re.sub(r'\D', '', code)
 
         # 读取xlsx文件
-        info=pd.read_excel(FUND_PROFILE_DIR+code+'.xlsx', sheet_name='info', header=0, index_col=None)
-        buy_points=pd.read_excel(FUND_PROFILE_DIR+code+'.xlsx', sheet_name='buypoints', header=0, index_col=None)
-        buy_points.sort_values(by='date', ascending=True, inplace=True)
-        sell_points=pd.read_excel(FUND_PROFILE_DIR+code+'.xlsx', sheet_name='sellpoints', header=0, index_col=None)
-        sell_points.sort_values(by='date', ascending=True, inplace=True)
+        try:
+            info=pd.read_excel(FUND_PROFILE_DIR+code+'.xlsx', sheet_name='info', header=0, index_col=None)
+            buy_points=pd.read_excel(FUND_PROFILE_DIR+code+'.xlsx', sheet_name='buypoints', header=0, index_col=None)
+            buy_points.sort_values(by='date', ascending=True, inplace=True)
+            sell_points=pd.read_excel(FUND_PROFILE_DIR+code+'.xlsx', sheet_name='sellpoints', header=0, index_col=None)
+            sell_points.sort_values(by='date', ascending=True, inplace=True)
+        except:
+            requests.post(SERVERCHAN3_URL,
+                          data={'title':'Error from recorder.py', 'desp':'xlsx文件读取错误，请检查文件！'+str(code), 'tags':'Error'})
+            continue
+            # sys.exit()
 
         fund_name=info['fund_name'][0]
         buy_rate=info['buy_rate'][0]
@@ -119,6 +112,25 @@ if __name__ == "__main__":
         history_profit=info['history_profit'][0]
         anchor=info['anchor'][0]
         anchor_date=info['anchor_date'][0]
+
+        # #号注释的基金跳过
+        if isCommented:
+            message += '## {} {}\n\n暂停监测  锚点：{} ({})\n\n'.format(code, fund_name, anchor, anchor_date)
+            continue
+
+        # 获取上一开盘日的净值
+        try:
+            htmltext=requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
+            pattern = r'^jsonpgz\((.*)\)'
+            searchObj = re.search(pattern, htmltext)
+            data=json.loads(searchObj.group(1))
+            last_opening_date=datetime.strptime(data['jzrq'], '%Y-%m-%d')
+            price=float(data['dwjz'])
+        except:
+            requests.post(SERVERCHAN3_URL,
+                          data={'title':'Error from recorder.py', 'desp':'净值抓取错误，请检查接口！'+str(code), 'tags':'Error'})
+            continue
+            # sys.exit()
 
         # 执行买入卖出操作
         message+='## {} {}\n\n'.format(code, fund_name)
