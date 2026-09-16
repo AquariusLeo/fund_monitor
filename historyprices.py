@@ -5,41 +5,12 @@
 """
 
 import requests
-from bs4 import BeautifulSoup
 import pandas as pd
-# from prettytable import *
 import warnings
 warnings.filterwarnings("ignore")
 
-
-def get_url(url, params=None, proxies=None):
-    rsp = requests.get(url, params=params, proxies=proxies)
-    rsp.raise_for_status()
-    return rsp.text
-
-def get_fund_total(code, start='', end=''):
-    record = {'Code': code}
-    url = 'http://fund.eastmoney.com/f10/F10DataApi.aspx'
-    params = {'type': 'lsjz', 'code': code, 'page': 1, 'per': 49, 'sdate': start, 'edate': end}
-    html = get_url(url, params)
-    temp =html.split(',')
-    return temp[1].split(':')[1],temp[2].split(':')[1],temp[3].replace("};","").split(':')[1]
-
-def get_fund_data(code, start='', end='', p=0):
-    url = 'http://fund.eastmoney.com/f10/F10DataApi.aspx'
-    params = {'type': 'lsjz', 'code': code, 'page': p+1, 'per': 49, 'sdate': start, 'edate': end}
-    html = get_url(url, params)
-    soup = BeautifulSoup(html, 'html.parser')
-    records = pd.DataFrame(columns=['date', 'price'])
-    tab = soup.findAll('tbody')[0]
-    for tr in tab.findAll('tr'):
-        if tr.findAll('td') and len((tr.findAll('td'))) == 7:
-            record = dict()
-            record['date'] = [pd.Timestamp(str(tr.select('td:nth-of-type(1)')[0].getText().strip()))]
-            record['price'] = [float(tr.select('td:nth-of-type(2)')[0].getText().strip())]
-            # record['ChangePercent'] = str(tr.select('td:nth-of-type(4)')[0].getText().strip())
-            records = pd.concat([records, pd.DataFrame(data=record)], ignore_index=True)
-    return records
+LSJZ_URL = 'https://api.fund.eastmoney.com/f10/lsjz'
+HEADERS = {'User-Agent': 'Mozilla/5.0', 'Referer': 'https://fund.eastmoney.com/'}
 
 
 # 获取基金历史净值，返回DataFrame（包含两列：date, price）
@@ -56,17 +27,40 @@ def get_history_prices(code, start, end):
         dtype=[Pandas.Timestamp, float]. In the descending order of date.
         Price is a float of four digits.
     """
-    # table = PrettyTable()
-    # table.field_names = ['Code', 'Date', 'NAV', 'Change']
-    # table.align['Change'] = 'r'
     table = pd.DataFrame(columns=['date', 'price'])
-    total, pages, currentpage = get_fund_total(code, start, end)
-    print("history_record_amount: "+total)
-    for i in range(int(pages)):
-        records = get_fund_data(code, start, end, i)
-        table = pd.concat([table, records], ignore_index=True)
-        # for record in records:
-        #     table.add_row([record['Code'], record['Date'], record['NetAssetValue'], record['ChangePercent']])
+    page_index = 1
+    page_size = 49
+    total_count = None
+
+    while total_count is None or (page_index - 1) * page_size < total_count:
+        params = {
+            'fundCode': code,
+            'pageIndex': page_index,
+            'pageSize': page_size,
+            'startDate': start,
+            'endDate': end,
+        }
+        rsp = requests.get(LSJZ_URL, params=params, headers=HEADERS)
+        rsp.raise_for_status()
+        result = rsp.json()
+
+        if result.get('Data') is None or result['Data'].get('LSJZList') is None:
+            break
+
+        if total_count is None:
+            total_count = result.get('TotalCount', 0)
+            page_size = result.get('PageSize', 20)
+            print("history_record_amount: " + str(total_count))
+
+        for item in result['Data']['LSJZList']:
+            record = {
+                'date': [pd.Timestamp(item['FSRQ'])],
+                'price': [float(item['DWJZ'])],
+            }
+            table = pd.concat([table, pd.DataFrame(data=record)], ignore_index=True)
+
+        page_index += 1
+
     print('Get fund history prices successfully!\n')
     return table
 

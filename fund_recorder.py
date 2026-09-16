@@ -3,7 +3,6 @@
 
 根据tobeRecord.csv文件写入基金操作，删除tobeRecord.csv文件，推送消息
 """
-import json
 import os
 import re
 import sys
@@ -31,11 +30,14 @@ if __name__ == "__main__":
 
     # 判断当天是否为开盘日
     try:
-        htmltext = requests.get('http://fundgz.1234567.com.cn/js/001811.js').text
-        pattern = r'^jsonpgz\((.*)\)'
-        searchObj = re.search(pattern, htmltext)
-        data = json.loads(searchObj.group(1))
-        gs_date=data['gztime'].split(' ')[0]  # 估值对应日期
+        resp = requests.get('https://fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo',
+                            params={'pageIndex':1, 'pageSize':1, 'plat':'Android',
+                                    'appType':'ttjj', 'product':'EFund', 'Version':'1',
+                                    'deviceid':'1', 'Fcodes':'001811'},
+                            headers={'User-Agent':'Mozilla/5.0'})
+        data = resp.json()
+        if data.get('Datas') is None or len(data['Datas']) == 0: raise ValueError
+        gs_date = data['Expansion']['GZTIME']  # 估值对应日期
     except Exception as e:
         print(e, file=log_fo)
         requests.post(SERVERCHAN3_URL,
@@ -50,14 +52,14 @@ if __name__ == "__main__":
         requests.post(SERVERCHAN3_URL,
                       data={'title':'Error from recorder.py', 'desp':'tobeRecord文件不存在，请检查！', 'tags':'Error'})
         sys.exit()
-    last_opendate=data['jzrq']  # 上一个开盘日期
-    modify_date=datetime.fromtimestamp(os.path.getmtime(RECORD_PATH)).strftime('%Y-%m-%d')
-    # print(last_opendate, file=log_fo)
-    # print(modify_date, file=log_fo)
-    if last_opendate != modify_date:
-        requests.post(SERVERCHAN3_URL,
-                      data={'title':'Error from recorder.py', 'desp':'tobeRecord文件修改时间非前一开盘日，请检查！', 'tags':'Error'})
-        sys.exit()
+    # last_opendate=data['jzrq']  # 上一个开盘日期
+    # modify_date=datetime.fromtimestamp(os.path.getmtime(RECORD_PATH)).strftime('%Y-%m-%d')
+    # # print(last_opendate, file=log_fo)
+    # # print(modify_date, file=log_fo)
+    # if last_opendate != modify_date:
+    #     requests.post(SERVERCHAN3_URL,
+    #                   data={'title':'Error from recorder.py', 'desp':'tobeRecord文件修改时间非前一开盘日，请检查！', 'tags':'Error'})
+    #     sys.exit()
 
     # 定义message与tobeRecord
     message=''
@@ -120,12 +122,17 @@ if __name__ == "__main__":
 
         # 获取上一开盘日的净值
         try:
-            htmltext=requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
-            pattern = r'^jsonpgz\((.*)\)'
-            searchObj = re.search(pattern, htmltext)
-            data=json.loads(searchObj.group(1))
-            last_opening_date=datetime.strptime(data['jzrq'], '%Y-%m-%d')
-            price=float(data['dwjz'])
+            resp = requests.get('https://fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo',
+                                params={'pageIndex':1, 'pageSize':1, 'plat':'Android',
+                                        'appType':'ttjj', 'product':'EFund', 'Version':'1',
+                                        'deviceid':'1', 'Fcodes':code},
+                                headers={'User-Agent':'Mozilla/5.0'})
+            result = resp.json()
+            if result.get('Datas') is None or len(result['Datas']) == 0: raise ValueError
+            data = result['Datas'][0]
+            if data.get('PDATE') is None or data.get('NAV') is None: raise ValueError
+            last_opening_date=datetime.strptime(data['PDATE'], '%Y-%m-%d')
+            price=float(data['NAV'])
         except:
             requests.post(SERVERCHAN3_URL,
                           data={'title':'Error from recorder.py', 'desp':'净值抓取错误，请检查接口！'+str(code), 'tags':'Error'})

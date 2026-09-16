@@ -5,7 +5,6 @@ The monitor of fund
 
 监控基金列表中的基金的估值情况，推送消息，写入tobeRecord.csv文件
 """
-import json
 import os
 import re
 import sys
@@ -30,11 +29,14 @@ if __name__ == "__main__":
 
     # 判断当天是否为开盘日
     try:
-        htmltext = requests.get('http://fundgz.1234567.com.cn/js/001811.js').text
-        pattern = r'^jsonpgz\((.*)\)'
-        searchObj = re.search(pattern, htmltext)
-        data = json.loads(searchObj.group(1))
-        gs_date = data['gztime'].split(' ')[0]  # 估值对应日期
+        resp = requests.get('https://fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo',
+                            params={'pageIndex':1, 'pageSize':1, 'plat':'Android',
+                                    'appType':'ttjj', 'product':'EFund', 'Version':'1',
+                                    'deviceid':'1', 'Fcodes':'001811'},
+                            headers={'User-Agent':'Mozilla/5.0'})
+        data = resp.json()
+        if data.get('Datas') is None or len(data['Datas']) == 0: raise ValueError
+        gs_date = data['Expansion']['GZTIME']  # 估值对应日期
     except Exception as e:
         print(e, file=log_fo)
         requests.post(SERVERCHAN3_URL,
@@ -112,19 +114,26 @@ if __name__ == "__main__":
 
         # 抓取当前基金估值
         try:
-            htmltext = requests.get('http://fundgz.1234567.com.cn/js/'+ code +'.js').text
-            pattern = r'^jsonpgz\((.*)\)'
-            searchObj = re.search(pattern, htmltext)
-            data = json.loads(searchObj.group(1))
-            if 'gsz' not in data: raise ValueError
-            gs_price=float(data['gsz'])
-            if 'gszzl' not in data: raise ValueError
-            change_rate=float(data['gszzl'])
+            resp = requests.get('https://fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo',
+                                params={'pageIndex':1, 'pageSize':1, 'plat':'Android',
+                                        'appType':'ttjj', 'product':'EFund', 'Version':'1',
+                                        'deviceid':'1', 'Fcodes':code},
+                                headers={'User-Agent':'Mozilla/5.0'})
+            result = resp.json()
+            if result.get('Datas') is None or len(result['Datas']) == 0: raise ValueError
+            data = result['Datas'][0]
         except:
             requests.post(SERVERCHAN3_URL,
                           data={'title':'Error from monitor.py', 'desp':'估值抓取错误，请检查接口！'+str(code), 'tags':'Error'})
             continue
             # sys.exit()
+            
+        # 非交易时段无估值数据，仅在message中记录
+        if data.get('GSZ') is None or data.get('GSZZL') is None:
+            message += '## {} {}\n\n锚点：{}  当前非交易时段，暂无估值数据\n\n'.format(code, fund_name, anchor)
+            continue
+        gs_price=float(data['GSZ'])
+        change_rate=float(data['GSZZL'])
 
         message+='## {} {}\n\n锚点：{}  估算净值：{}  **涨跌幅：{}%** \n\n**较锚点变化：{}%  较成本单价变化：{}%**    脱离成本区间{}%的净值：{}\n\n'.format(
             code, fund_name, anchor, gs_price, change_rate,
